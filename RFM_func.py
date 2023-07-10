@@ -1,13 +1,11 @@
 
-
 import datetime as dt
 import pandas as pd
 import time
 import warnings
 
 pd.set_option('display.max_columns', None)
-pd.set_option('display.width', 400)
-# pd.set_option('display.max_rows', None)
+pd.set_option('display.width', 500)
 pd.set_option('display.float_format', lambda x: '%.3f' % x)
 
 
@@ -15,23 +13,39 @@ df_ = pd.read_csv("flo_data_20k.csv")
 df = df_.copy()
 
 
-def pre_analysing(df):
-    print(df.head(10))
-    print(df.columns)
-    print(df.dtypes)
-    print(df.shape)
-    print(df.isnull().sum())
-    print(df.describe().T)
-    return
+def check_df(dataframe, shape=False, columns=False, info=False, na=False, desc=False):
+    """
+    this func checks dataframe's
+    :param dataframe: Pandas dataframe
+    :param shape: checks shape of df
+    :param columns: shows columns names
+    :param info: prints columns types
+    :param na: calculates NaN values in df
+    :param desc: shows df's describtion
+    """
+    outputs = []
+    if shape:
+        outputs.append(('Shape', dataframe.shape))
+    if columns:
+        outputs.append(('Columns', dataframe.columns))
+    if info:
+        outputs.append(('Types', dataframe.dtypes))
+    if na:
+        outputs.append(('NA', dataframe.isnull().sum()))
+    if desc:
+        outputs.append(('Descriptive', dataframe.describe().T))
+    for output in outputs:
+        print(15 * "#", output[0], 15 * "#")
+        print(output[1], "\n")
 
 
 def change_date_types(dataframe):
-    '''Changes a variable types of dates from object to datetime '''
+    '''Summarizes online and offline orders, then changes a variable types of dates from object to datetime '''
 
     dataframe["total_order_num"] = dataframe["order_num_total_ever_online"] + dataframe["order_num_total_ever_offline"]
     dataframe["total_customer_value"] = dataframe["customer_value_total_ever_offline"] + dataframe[
         "customer_value_total_ever_online"]
-    for col in dataframe.columns:  # 0.07s
+    for col in dataframe.columns:
         if "date" in col:
             dataframe[col] = pd.to_datetime(dataframe[col])
 
@@ -39,20 +53,27 @@ def change_date_types(dataframe):
 
 
 def analyze_df(dataframe, avg_order_and_value=False, show_best_values=False, show_most_orders=False):
-
+    outputs = []
     if avg_order_and_value:
         print("avg orders and values are:")
-        print(dataframe.groupby("order_channel").agg({"master_id": ["count"],
-                                                       "total_order_num": "mean",
-                                                       "total_customer_value": "mean"}).reset_index().head())
+        outputs.append(('"avg orders and values are:"', dataframe.groupby("order_channel").
+                                                                    agg({"master_id": ["count"],
+                                                                        "total_order_num": "mean",
+                                                                        "total_customer_value": "mean"}).
+                                                                                             reset_index().head()))
     if show_best_values:
-        print("top 5 values are:")
-        print(dataframe[["master_id", "total_customer_value"]].sort_values("total_customer_value",
-                                                                            ascending=False).reset_index().head())
+        print("best customers are:")
+        outputs.append(('best customers', dataframe.groupby("order_channel").
+                                                                     agg({"master_id":  ["count"],
+                                                                          "total_order_num": "mean",
+                                                                          "total_customer_value": "mean"}).
+                                                                                             reset_index().head()))
     if show_most_orders:
         print("most orders are:")
-        print(dataframe[["master_id", "total_order_num"]].sort_values("total_order_num",
-                                                                      ascending=False).reset_index().head())
+        outputs.append(('most orders are:', dataframe[["master_id", "total_order_num"]].
+                                                   sort_values("total_order_num", ascending=False).reset_index().head()))
+
+    return outputs
 
 
 # calling functions
@@ -108,7 +129,8 @@ def rfm_metrix(dataframe, csv=False):
         rfm_men_and_children['master_id'].to_csv("target_customer", index=False)
 
 
-pre_analysing(df)
-df_with_updated_date = change_date_types(df)
+check_df(df)
+df_with_updated_dates = change_date_types(df)
 analyze_df(df, show_best_values=True, show_most_orders=True)
-rfm_metrix(df_with_updated_date, csv=True)
+rfm_metrix(df_with_updated_dates, csv=True)
+
